@@ -1,10 +1,12 @@
+/*For detailed function and class documentation see the header file. */
+
 #include "IK_Logic.h"
 
 using namespace std;
 using namespace Eigen;
 
 //for debug
-IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", " << ", ";");
+
 
 /*Constructs an arm. Sequence of arms needs to be specified in order with base arm segment at index 0, and last arm at index size - 1*/
 Arm::Arm(vector<float> sequence) {
@@ -33,6 +35,30 @@ void Arm::GL_Render_Arm(){
 }
 void Arm::rotate_arm(int seg, Vector3f orientation) {
 	arm_sequence.at(seg).set_joint_orientation(orientation);
+}
+
+Vector3f Arm::get_end_pos() {
+	Vector3f start = sys_to_world;
+	float x = sys_to_world(0);
+	float y = sys_to_world(1);
+	float z = sys_to_world(2);
+	float sum_x_theta = 0;
+	float sum_y_theta = 0;
+	float sum_z_theta = 0;
+	for (int i = 0; i < arm_sequence.size(); i ++) {
+		Vector3f orientation = arm_sequence.at(i).get_joint_orientation();
+		sum_x_theta += orientation(0);
+		sum_y_theta += orientation(1);
+		sum_z_theta += orientation(2);
+		x += arm_sequence.at(i).get_arm_length() * cos(sum_x_theta * PI / 180);
+		y += arm_sequence.at(i).get_arm_length() * cos(sum_y_theta * PI / 180);
+		z += arm_sequence.at(i).get_arm_length() * cos(sum_z_theta * PI / 180);
+	}
+	return Vector3f(x, y, z);
+}
+
+MatrixXf Arm::compute_Jacobian() {
+	return Vector3f(0, 0, 0);
 }
 
 ArmSegment::ArmSegment(float arm_length, int joint_type) {

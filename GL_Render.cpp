@@ -13,6 +13,7 @@
 using namespace std;
 using namespace Eigen;
 
+
 float zoom = 15.0f;
 float rotx = 0;
 float roty = 0.001f;
@@ -28,6 +29,32 @@ void init()
 	glEnable(GL_DEPTH_TEST);
 
 }
+void draw_coords() {
+	glColor3f(1, 0, 0);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 1);
+	glColor3f(0, 1, 0);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 1, 0);
+	glColor3f(0, 0, 1);
+	glVertex3f(0, 0, 0);
+	glVertex3f(1, 0, 0);
+}
+void draw_grid() {
+	for (int i = 0; i <= 20; i ++) {
+		glVertex3f((float)i / 5 , -4, 0);
+		glVertex3f((float)i / 5 , 4, 0);
+
+		glVertex3f((float)-i / 5, -4, 0);
+		glVertex3f((float)-i / 5, 4, 0);
+
+		glVertex3f(-4, (float)i / 5 , 0);
+		glVertex3f(4, (float)i / 5 , 0);
+
+		glVertex3f(-4, (float)-i / 5, 0);
+		glVertex3f(4, (float)-i / 5, 0);
+	}
+}
 
 void display()
 {
@@ -40,25 +67,14 @@ void display()
 	glRotatef(roty,0,1,0);
 	glEnable(GL_NORMALIZE);
 
-	/*Draw grid */
+	/*Draw coords */
 	glBegin(GL_LINES);
-		for (int i = 0; i <= 4; i ++) {
-			glVertex3f(i, -4, 0);
-			glVertex3f(i, 4, 0);
-
-			glVertex3f(-i, -4, 0);
-			glVertex3f(-i, 4, 0);
-
-			glVertex3f(-4, i, 0);
-			glVertex3f(4, i, 0);
-
-			glVertex3f(-4, -i, 0);
-			glVertex3f(4, -i, 0);
-		}
+		draw_coords();
 	glEnd();
+
 	glMatrixMode(GL_MODELVIEW); //I don't think this call is necssary but it can't hurt.
 	GL_Arm->GL_Render_Arm();
-
+	cout << "End arm pos : " << GL_Arm->get_end_pos() << "\n";
 	glutSwapBuffers();
 }
 
@@ -74,6 +90,7 @@ void reshape(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
+
 
 void Motion(int x,int y)
 {
