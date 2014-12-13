@@ -2,6 +2,10 @@
 
 using namespace std;
 using namespace Eigen;
+
+//for debug
+IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", " << ", ";");
+
 /*Constructs an arm. Sequence of arms needs to be specified in order with base arm segment at index 0, and last arm at index size - 1*/
 Arm::Arm(vector<float> sequence) {
 	sys_to_world = Vector3f(0, 0, 0);
@@ -27,7 +31,9 @@ void Arm::GL_Render_Arm(){
 	}
 	glPopMatrix();
 }
-
+void Arm::rotate_arm(int seg, Vector3f orientation) {
+	arm_sequence.at(seg).set_joint_orientation(orientation);
+}
 
 ArmSegment::ArmSegment(float arm_length, int joint_type) {
 	this->arm_length = arm_length;
@@ -48,5 +54,5 @@ int ArmSegment::get_joint_type() {
 }
 
 void ArmSegment::GL_Render_ArmSegment() {
-	glutWireCone((float) arm_length / 2, arm_length, 20, 20);
+	glutWireCone((float) arm_length / 4, arm_length, 20, 20);
 }

@@ -58,6 +58,7 @@ void display()
 	glEnd();
 	glMatrixMode(GL_MODELVIEW); //I don't think this call is necssary but it can't hurt.
 	GL_Arm->GL_Render_Arm();
+
 	glutSwapBuffers();
 }
 

@@ -37,6 +37,7 @@ class Arm {
 		Arm(vector<float> arm_length_sequence); //by default uses ball joints. 
 		void GL_Render_Arm();
 		void IK_Solve(Vector3f pos);
+		void rotate_arm(int seg, Vector3f orientation);
 	private: 
 		vector<ArmSegment> arm_sequence;
 		Vector3f sys_to_world;
