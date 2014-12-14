@@ -22,6 +22,12 @@ enum JOINT_TYPES {
   BALL = 0
 };
 
+enum coords {
+	X = 1,
+	Y = 2,
+	Z = 3
+};
+
 /*An arm segment consists of the joint that the segment swivels on, and the length of the arm. Orientations are specified using angle axis notation
 with magnitude being the total angle being rotated in degrees.*/
 class ArmSegment {
@@ -39,15 +45,18 @@ private:
 };
 
 class Arm {
-	public:
+	public:		
+		vector<ArmSegment> arm_sequence;
 		Arm(vector<float> arm_length_sequence); //by default uses ball joints. 
+		Arm(vector<ArmSegment> sequence); //Copies an existing arm sequence to create a new arm. 
 		void GL_Render_Arm(); /*Render the arm in openGL when in callback function display*/
 		void IK_Solve(Vector3f pos); /*Best-effort arrangement of joints to get arm close as possible to position pos.*/
 		void rotate_arm(int seg, Vector3f orientation); /*Rotate a specific joint by orientation*/
 		Vector3f get_end_pos(); /*Computes the end position of the arm, from base at Vector3f(0,0,0)*/
 		MatrixXf compute_Jacobian();
+		Vector3f dPdT(int joint, int axis);/*Computes dp/dtheta for a specific joint along a certain axis to construct Jacobian*/
 	private: 
-		vector<ArmSegment> arm_sequence;
+
 		Vector3f sys_to_world;
 };
 

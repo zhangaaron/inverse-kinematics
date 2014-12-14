@@ -7,7 +7,7 @@ using namespace Eigen;
 
 //for debug
 
-
+IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", " << ", ";");
 /*Constructs an arm. Sequence of arms needs to be specified in order with base arm segment at index 0, and last arm at index size - 1*/
 Arm::Arm(vector<float> sequence) {
 	sys_to_world = Vector3f(0, 0, 0);
@@ -16,6 +16,9 @@ Arm::Arm(vector<float> sequence) {
 		ArmSegment a = ArmSegment(sequence.at(i), BALL);
 		arm_sequence.push_back(a);
 	}
+}
+Arm::Arm(vector<ArmSegment> sequence) {
+	arm_sequence = sequence;
 }
 /*Call this inside display callback of GL to draw the arm as a sequence of cylinders*/
 void Arm::GL_Render_Arm(){
@@ -58,7 +61,46 @@ Vector3f Arm::get_end_pos() {
 }
 
 MatrixXf Arm::compute_Jacobian() {
-	return Vector3f(0, 0, 0);
+	/*X, Y, Z are three different orthogonal axises on which a ball joint can rotate. */
+	printf("Hello world\n");
+	MatrixXf Jacobian = MatrixXf(3, 3 * arm_sequence.size() ); 
+	for (int i = 0; i < arm_sequence.size(); i++) {
+		Vector3f dPdT_joint_i_X = dPdT(i, X);
+		Vector3f dPdT_joint_i_Y = dPdT(i, Y);
+		Vector3f dPdT_joint_i_Z = dPdT(i, Z);
+		printf("We good here\n");
+		Jacobian.col(i) << dPdT_joint_i_X;
+		Jacobian.col(i + 1) << dPdT_joint_i_Y;
+		Jacobian.col(i + 2) << dPdT_joint_i_Z;
+	}
+	return Jacobian;
+}
+Vector3f Arm::dPdT(int joint, int axis) {
+	Arm jittered_arm = Arm(this->arm_sequence);
+	cout << "new arm" << 	jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
+	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation();
+	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
+	switch (axis) { //Jitter by 1 degree for any axis
+		case X:
+			new_orientation = original_orientation + Vector3f(1, 0, 0);
+			break;
+		case Y:
+			new_orientation = original_orientation + Vector3f(0, 1, 0);
+			break;
+		case Z:
+			new_orientation = original_orientation + Vector3f(0, 0, 1);
+			break;
+		default:
+			printf("Unexpected axis value in dPdT\n");
+			exit(0);
+	}
+	// cout << "Old orientation : " << original_orientation.format(CommaInitFmt) << "\n" << "new orientation "
+	// 		<< new_orientation.format(CommaInitFmt) << "\n";
+	 jittered_arm.arm_sequence.at(joint).set_joint_orientation(new_orientation);
+	// cout << "Old end pos" << jittered_arm.get_end_pos().format(CommaInitFmt) << "\n" << "new end_pos "
+	// 		<< this->get_end_pos().format(CommaInitFmt) << "\n";
+
+	return jittered_arm.get_end_pos() - this->get_end_pos(); 
 }
 
 ArmSegment::ArmSegment(float arm_length, int joint_type) {

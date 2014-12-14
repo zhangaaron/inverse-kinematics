@@ -22,6 +22,6 @@ int main ( int argc, char **argv) {
 	test_arm.rotate_arm(0, Vector3f(45, 45, 45));
 	test_arm.rotate_arm(1, Vector3f(45, 45, 45));
 	test_arm.rotate_arm(2, Vector3f(45, 45, 45));
-	//cout << "End arm pos : " << test_arm.get_end_pos() << "\n";
-	run_glut(test_arm, &argc, argv);
+	cout << "End arm pos :\n " << test_arm.compute_Jacobian()<< "\n";
+	//run_glut(test_arm, &argc, argv);
 }
