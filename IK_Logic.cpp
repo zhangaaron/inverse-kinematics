@@ -12,15 +12,27 @@ IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", " << "
 Arm::Arm(vector<float> sequence) {
 	sys_to_world = Vector3f(0, 0, 0);
 	arm_sequence = vector<ArmSegment>();
+	float arm_length = 0;
 	for (int i = 0; i < sequence.size(); i++) {
 		ArmSegment a = ArmSegment(sequence.at(i), BALL);
 		arm_sequence.push_back(a);
+		arm_length += a.get_arm_length();
 	}
 }
-Arm::Arm(vector<ArmSegment> sequence) {
+Arm::Arm(Arm *toCopy) {
 	sys_to_world = Vector3f(0, 0, 0);
-	arm_sequence = sequence;
+	arm_sequence = toCopy->get_arm_sequence();
+	arm_length = toCopy->get_arm_length();
 }
+
+float Arm::get_arm_length() {
+	return arm_length;
+}
+
+vector<ArmSegment> Arm::get_arm_sequence() {
+	return arm_sequence;
+}
+
 /*Call this inside display callback of GL to draw the arm as a sequence of cylinders*/
 void Arm::GL_Render_Arm(){
 	glPushMatrix();
@@ -39,6 +51,28 @@ void Arm::GL_Render_Arm(){
 }
 void Arm::rotate_arm(int seg, Vector3f orientation) {
 	arm_sequence.at(seg).set_joint_orientation(orientation);
+}
+
+bool Arm::update(Vector3f goal_pos) {
+	goal_pos = goal_pos - sys_to_world;
+	float arm_len =  get_arm_length();
+	if (goal_pos.norm() > get_arm_length()) {
+		goal_pos.normalize();
+		goal_pos *= arm_len;
+		printf("Goal we got was out of reach, so we normalized to arm length\n");
+	}
+	Vector3f dP = goal_pos - get_end_pos();
+	if (dP.norm() > EPS) {
+		MatrixXf Jacobian = compute_Jacobian();
+		JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); //Breaks J = USV*, where S is diagonalizable matrix? 
+		cout << "singular values are:" << endl << svd.singularValues() << endl;
+		cout << "left singular vectors are the columns of the thin U matrix:" << endl << svd.matrixU() << endl;
+		cout << "right singular vectors are the columns of the thin V matrix:" << endl << svd.matrixV() << endl;
+		Vector3f dT = svd.solve(dP);
+		cout << "solved for dT = " << dT << endl;
+		return false;
+	}
+	return true;
 }
 
 Vector3f Arm::get_end_pos() {
@@ -71,7 +105,6 @@ MatrixXf Arm::compute_Jacobian() {
 		Vector3f dPdT_joint_i_X = dPdT(i, X);
 		Vector3f dPdT_joint_i_Y = dPdT(i, Y);
 		Vector3f dPdT_joint_i_Z = dPdT(i, Z);
-		printf("We good here\n");
 		Jacobian.col(3 * i) << dPdT_joint_i_X;
 		Jacobian.col(3 * i + 1) << dPdT_joint_i_Y;
 		Jacobian.col(3 * i + 2) << dPdT_joint_i_Z;
@@ -79,7 +112,7 @@ MatrixXf Arm::compute_Jacobian() {
 	return Jacobian;
 }
 Vector3f Arm::dPdT(int joint, int axis) {
-	Arm jittered_arm = Arm(this->arm_sequence);
+	Arm jittered_arm = Arm(this);
 	cout << "new arm" << jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
 	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation();
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
