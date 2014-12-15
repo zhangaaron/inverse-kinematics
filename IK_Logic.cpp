@@ -18,6 +18,7 @@ Arm::Arm(vector<float> sequence) {
 	}
 }
 Arm::Arm(vector<ArmSegment> sequence) {
+	sys_to_world = Vector3f(0, 0, 0);
 	arm_sequence = sequence;
 }
 /*Call this inside display callback of GL to draw the arm as a sequence of cylinders*/
@@ -57,27 +58,29 @@ Vector3f Arm::get_end_pos() {
 		y += arm_sequence.at(i).get_arm_length() * cos(sum_y_theta * PI / 180);
 		z += arm_sequence.at(i).get_arm_length() * cos(sum_z_theta * PI / 180);
 	}
+	assert (x < 100);
+	assert (y < 100);
+	assert (z < 100);
 	return Vector3f(x, y, z);
 }
 
 MatrixXf Arm::compute_Jacobian() {
 	/*X, Y, Z are three different orthogonal axises on which a ball joint can rotate. */
-	printf("Hello world\n");
 	MatrixXf Jacobian = MatrixXf(3, 3 * arm_sequence.size() ); 
 	for (int i = 0; i < arm_sequence.size(); i++) {
 		Vector3f dPdT_joint_i_X = dPdT(i, X);
 		Vector3f dPdT_joint_i_Y = dPdT(i, Y);
 		Vector3f dPdT_joint_i_Z = dPdT(i, Z);
 		printf("We good here\n");
-		Jacobian.col(i) << dPdT_joint_i_X;
-		Jacobian.col(i + 1) << dPdT_joint_i_Y;
-		Jacobian.col(i + 2) << dPdT_joint_i_Z;
+		Jacobian.col(3 * i) << dPdT_joint_i_X;
+		Jacobian.col(3 * i + 1) << dPdT_joint_i_Y;
+		Jacobian.col(3 * i + 2) << dPdT_joint_i_Z;
 	}
 	return Jacobian;
 }
 Vector3f Arm::dPdT(int joint, int axis) {
 	Arm jittered_arm = Arm(this->arm_sequence);
-	cout << "new arm" << 	jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
+	cout << "new arm" << jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
 	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation();
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
 	switch (axis) { //Jitter by 1 degree for any axis
@@ -97,10 +100,11 @@ Vector3f Arm::dPdT(int joint, int axis) {
 	// cout << "Old orientation : " << original_orientation.format(CommaInitFmt) << "\n" << "new orientation "
 	// 		<< new_orientation.format(CommaInitFmt) << "\n";
 	 jittered_arm.arm_sequence.at(joint).set_joint_orientation(new_orientation);
+	 cout << "new arm updated" << 	jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
 	// cout << "Old end pos" << jittered_arm.get_end_pos().format(CommaInitFmt) << "\n" << "new end_pos "
 	// 		<< this->get_end_pos().format(CommaInitFmt) << "\n";
 
-	return jittered_arm.get_end_pos() - this->get_end_pos(); 
+	return jittered_arm.get_end_pos() - this->get_end_pos();
 }
 
 ArmSegment::ArmSegment(float arm_length, int joint_type) {
