@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -DGL_GLEXT_PROTOTYPES -Wall -ansi -Ieigen -Iglut-3.7.6-bin -O3
+CFLAGS = -DGL_GLEXT_PROTOTYPES -Wall -ansi -Ieigen -Iglut-3.7.6-bin
 CFLAGS_g = -g -DGL_GLEXT_PROTOTYPES -Wall -ansi -Ieigen -Iglut-3.7.6-bin
 LDFLAGS = -lGL -lGLU -lglut
 all: main

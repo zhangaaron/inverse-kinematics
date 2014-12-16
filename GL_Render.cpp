@@ -23,6 +23,7 @@ int lastx = 0;
 int lasty = 0;
 unsigned char Buttons[3] = {0};
 Arm *GL_Arm;
+Vector3f goal;
 
 void init() 
 {
@@ -74,7 +75,16 @@ void display()
 
 	glMatrixMode(GL_MODELVIEW); //I don't think this call is necssary but it can't hurt.
 	GL_Arm->GL_Render_Arm();
-	cout << "End arm pos : " << GL_Arm->get_end_pos() << "\n";
+
+	glColor3f(1, 0, 0);
+	glPushMatrix();
+	glTranslatef(goal(0), goal(1), goal(2));
+	glutWireSphere(0.3, 10, 10);
+	glPopMatrix();
+	glColor3f(1, 1, 1);
+	GL_Arm->update(goal);
+	GL_Arm->GL_Render_Arm();
+	
 	glutSwapBuffers();
 }
 
@@ -165,14 +175,14 @@ void Mouse(int b,int s,int x,int y)
 	glutPostRedisplay();
 }
 
-void run_glut(Arm toRender, int *argcp, char **argv){
+void run_glut(Arm toRender, Vector3f goal_, int *argcp, char **argv){
 	glutInit(argcp,argv);
 	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
 	glutInitWindowSize(640,480);
 	glutInitWindowPosition(100,100);
 	glutCreateWindow("IK");
 	GL_Arm = &toRender;
-
+	goal = goal_;
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutMouseFunc(Mouse);

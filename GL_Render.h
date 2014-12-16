@@ -17,5 +17,4 @@
 using namespace std;
 using namespace Eigen;
 
-void display();
-void run_glut(Arm myArm, int *argcp, char **argv);
+void run_glut(Arm toRender, Vector3f goal_, int *argcp, char **argv);

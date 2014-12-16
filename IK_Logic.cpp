@@ -43,7 +43,7 @@ void Arm::GL_Render_Arm(){
 		ArmSegment seg = arm_sequence.at(i);
 		Vector3f orientation = seg.get_joint_orientation();
 		float mag = orientation.norm();
-		glRotatef(mag, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
+		if (mag) glRotatef(mag, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
 		seg.GL_Render_ArmSegment();
 		glTranslatef(0, 0, seg.get_arm_length());
 	}
@@ -62,14 +62,19 @@ bool Arm::update(Vector3f goal_pos) {
 		printf("Goal we got was out of reach, so we normalized to arm length\n");
 	}
 	Vector3f dP = goal_pos - get_end_pos();
+	cout << "dP is " << dP << endl;
 	if (dP.norm() > EPS) {
 		MatrixXf Jacobian = compute_Jacobian();
 		JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); //Breaks J = USV*, where S is diagonalizable matrix? 
 		cout << "singular values are:" << endl << svd.singularValues() << endl;
 		cout << "left singular vectors are the columns of the thin U matrix:" << endl << svd.matrixU() << endl;
 		cout << "right singular vectors are the columns of the thin V matrix:" << endl << svd.matrixV() << endl;
-		Vector3f dT = svd.solve(dP);
-		cout << "solved for dT = " << dT << endl;
+		MatrixXf dT = svd.solve(dP);
+		 cout << "solved for dT = " << dT << endl;
+		 //cout << "DT size" << dT.size() << "cols, rows" << dT.cols() << ", " << dT.rows();
+		for (int i = 0; i < get_arm_sequence().size(); i++) {
+			rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)));
+		}
 		return false;
 	}
 	return true;
@@ -109,11 +114,11 @@ MatrixXf Arm::compute_Jacobian() {
 		Jacobian.col(3 * i + 1) << dPdT_joint_i_Y;
 		Jacobian.col(3 * i + 2) << dPdT_joint_i_Z;
 	}
+	cout << "Jacobian \n" << Jacobian << endl;
 	return Jacobian;
 }
 Vector3f Arm::dPdT(int joint, int axis) {
 	Arm jittered_arm = Arm(this);
-	cout << "new arm" << jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
 	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation();
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
 	switch (axis) { //Jitter by 1 degree for any axis
@@ -130,13 +135,7 @@ Vector3f Arm::dPdT(int joint, int axis) {
 			printf("Unexpected axis value in dPdT\n");
 			exit(0);
 	}
-	// cout << "Old orientation : " << original_orientation.format(CommaInitFmt) << "\n" << "new orientation "
-	// 		<< new_orientation.format(CommaInitFmt) << "\n";
 	 jittered_arm.arm_sequence.at(joint).set_joint_orientation(new_orientation);
-	 cout << "new arm updated" << 	jittered_arm.arm_sequence.at(2).get_joint_orientation().format(CommaInitFmt) << "\n";
-	// cout << "Old end pos" << jittered_arm.get_end_pos().format(CommaInitFmt) << "\n" << "new end_pos "
-	// 		<< this->get_end_pos().format(CommaInitFmt) << "\n";
-
 	return jittered_arm.get_end_pos() - this->get_end_pos();
 }
 
@@ -159,5 +158,6 @@ int ArmSegment::get_joint_type() {
 }
 
 void ArmSegment::GL_Render_ArmSegment() {
+	glutWireSphere((float) arm_length /4, 15, 15);
 	glutWireCone((float) arm_length / 4, arm_length, 20, 20);
 }
