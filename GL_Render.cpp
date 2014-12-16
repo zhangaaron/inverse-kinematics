@@ -106,9 +106,8 @@ void Motion(int x,int y)
 {
 	int diffx = x-lastx;
 	int diffy = y-lasty;
-	lastx=x;
-	lasty=y;
-
+	lastx = x;
+	lasty = y;
 	if( Buttons[0] && Buttons[1] )
 	{
 		zoom -= (float) 0.05f * diffx;

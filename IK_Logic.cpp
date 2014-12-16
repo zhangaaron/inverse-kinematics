@@ -12,11 +12,12 @@ IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", " << "
 Arm::Arm(vector<float> sequence) {
 	sys_to_world = Vector3f(0, 0, 0);
 	arm_sequence = vector<ArmSegment>();
-	float arm_length = 0;
+	arm_length = 0;
 	for (int i = 0; i < sequence.size(); i++) {
 		ArmSegment a = ArmSegment(sequence.at(i), BALL);
 		arm_sequence.push_back(a);
 		arm_length += a.get_arm_length();
+		cout << "arm_len " << arm_length << endl;
 	}
 }
 Arm::Arm(Arm *toCopy) {
@@ -56,6 +57,8 @@ void Arm::rotate_arm(int seg, Vector3f orientation) {
 bool Arm::update(Vector3f goal_pos) {
 	goal_pos = goal_pos - sys_to_world;
 	float arm_len =  get_arm_length();
+	cout << "arm length " << arm_len << endl;
+	cout << "goal_pos.norm" << goal_pos.norm() << endl;
 	if (goal_pos.norm() > get_arm_length()) {
 		goal_pos.normalize();
 		goal_pos *= arm_len;
@@ -79,28 +82,20 @@ bool Arm::update(Vector3f goal_pos) {
 	}
 	return true;
 }
-
+//This is broken!
+/*We gon need a transformation stack to keep track of our transformation*/
 Vector3f Arm::get_end_pos() {
-	Vector3f start = sys_to_world;
-	float x = sys_to_world(0);
-	float y = sys_to_world(1);
-	float z = sys_to_world(2);
-	float sum_x_theta = 0;
-	float sum_y_theta = 0;
-	float sum_z_theta = 0;
+	Vector3f end_effector = sys_to_world;
+	AngleAxisf transformation_stack = AngleAxisf(0, Vector3f(0, 0, 0));
+
 	for (int i = 0; i < arm_sequence.size(); i ++) {
 		Vector3f orientation = arm_sequence.at(i).get_joint_orientation();
-		sum_x_theta += orientation(0);
-		sum_y_theta += orientation(1);
-		sum_z_theta += orientation(2);
-		x += arm_sequence.at(i).get_arm_length() * cos(sum_x_theta * PI / 180);
-		y += arm_sequence.at(i).get_arm_length() * cos(sum_y_theta * PI / 180);
-		z += arm_sequence.at(i).get_arm_length() * cos(sum_z_theta * PI / 180);
+		float norm = orientation.norm();
+		orientation.normalized();
+		transformation_stack = transformation_stack * AngleAxisf(norm, orientation);
+		end_effector += transformation_stack * Vector3f(0, 0, arm_sequence.at(i).get_arm_length());
 	}
-	assert (x < 100);
-	assert (y < 100);
-	assert (z < 100);
-	return Vector3f(x, y, z);
+	return end_effector;
 }
 
 MatrixXf Arm::compute_Jacobian() {
