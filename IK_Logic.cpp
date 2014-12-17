@@ -38,17 +38,32 @@ void Arm::GL_Render_Arm(){
 	glPushMatrix();
 	//glMultmatrixf(sys_to_world); //Default should be 0/
 
-	for (int i = 0; i < arm_sequence.size(); i++ ) {
+	for (int i = 0; i < arm_sequence.size(); i++) {
 		//Do transformation
 		ArmSegment seg = arm_sequence.at(i);
 		Vector3f orientation = seg.get_joint_orientation_v();
 		float mag = orientation.norm();
-		if (mag) glRotatef(mag, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
+		cout << "AngleAxisf encoding for arm: " << seg.get_joint_orientation_v() << endl; 
+		if (mag != 0.0) glRotatef(mag * 180 / PI, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
 		seg.GL_Render_ArmSegment();
 		glTranslatef(0, 0, seg.get_arm_length());
 	}
 	glPopMatrix();
 }
+
+/*We gon need a transformation stack to keep track of our transformation*/
+Vector3f Arm::get_end_pos() {
+	Vector3f end_effector = sys_to_world;
+
+	for (int i = arm_sequence.size() -1; i >= 0; i--) {
+		AngleAxisf orientation  = arm_sequence.at(i).get_joint_orientation();
+		float len = arm_sequence.at(i).get_arm_length();
+		end_effector = Transform<float, 3, Affine>(orientation) *
+						 Transform<float, 3, Affine>(Translation3f(0, 0, len)) * end_effector;
+	}
+	return end_effector;
+}
+
 void Arm::rotate_arm(int seg, Vector3f orientation) {
 	arm_sequence.at(seg).set_joint_orientation(orientation);
 }
@@ -107,18 +122,7 @@ bool Arm::linear_update(Vector3f goal_pos) {
 	return (dP.norm() > (goal_pos - get_end_pos()).norm() ); 
 }
 
-/*We gon need a transformation stack to keep track of our transformation*/
-Vector3f Arm::get_end_pos() {
-	Vector3f end_effector = sys_to_world;
 
-	for (int i = 0; i < arm_sequence.size(); i ++) {
-		AngleAxisf orientation  = arm_sequence.at(i).get_joint_orientation();
-		float len = arm_sequence.at(i).get_arm_length();
-		end_effector = Transform<float, 3, Affine>(orientation) *
-						 Transform<float, 3, Affine>(Translation3f(0, 0, len)) * end_effector;
-	}
-	return end_effector;
-}
 
 MatrixXf Arm::compute_Jacobian() {
 	/*X, Y, Z are three different orthogonal axises on which a ball joint can rotate. */
@@ -135,13 +139,13 @@ MatrixXf Arm::compute_Jacobian() {
 	return Jacobian;
 }
 
-MatrixXf Arm::pseudo_inverse() {
-    MatrixXf Jacovian = compute_Jacobian();
-    MatrixXf jjtInv = (Jacovian * Jacovian.transpose());
-    jjtInv = jjtInv.inverse();
+// MatrixXf Arm::pseudo_inverse() {
+//     MatrixXf Jacovian = compute_Jacobian();
+//     MatrixXf jjtInv = (Jacovian * Jacovian.transpose());
+//     jjtInv = jjtInv.inverse();
     
-    return (Jacovian.transpose() * jjtInv);
-}
+//     return (Jacovian.transpose() * jjtInv);
+// }
 Vector3f Arm::dPdT(int joint, int axis) {
 	Arm jittered_arm = Arm(this);
 	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation_v();

@@ -49,7 +49,7 @@ private:
 };
 
 class Arm {
-	public:		
+	public:	
 		
 		Arm(vector<float> arm_length_sequence); //by default uses ball joints. 
 		Arm(Arm *toCopy); //Copies an existing arm sequence to create a new arm.
@@ -61,7 +61,7 @@ class Arm {
 		void IK_Solve(Vector3f pos); /*Best-effort arrangement of joints to get arm close as possible to position pos.*/
 		void rotate_arm(int seg, Vector3f orientation); /*Rotate a specific joint by orientation*/
 		void set_orientations(vector<Vector3f> vals);
-		vector<Vector3f> get_orientations();
+		vector<Vector3f> get_orientations(); //*Returns the list of orientations*//
 		bool iterative_update(Vector3f goal_pos);
 		bool linear_update(Vector3f goal_pos); /*Perform the update algorithm on the arm to move it to goal_pos*/
 		Vector3f get_end_pos(); /*Computes the end position of the arm, from base at Vector3f(0,0,0)*/

@@ -24,6 +24,7 @@ int lasty = 0;
 unsigned char Buttons[3] = {0};
 Arm *GL_Arm;
 Vector3f goal;
+bool update_arm = true;
 
 void init() 
 {
@@ -83,11 +84,18 @@ void display()
 	glPopMatrix();
 	glColor3f(1, 1, 1);
 	int i = 0;
-	while(!GL_Arm->iterative_update(goal)) {
+	while(update_arm && i < 30 && !GL_Arm->iterative_update(goal) ) {
 		i++;
-		assert (i < 10);
 	}
+	if (i == 30) printf("Warning: we updated 30 times and did not reach error threshold\n");
+	update_arm = false;
 	GL_Arm->GL_Render_Arm();
+	glColor3f(0, 1, 0);
+	Vector3f actual = GL_Arm->get_end_pos();
+	glPushMatrix();
+	glTranslatef(actual(0), actual(1), actual(2));
+	glutWireSphere(0.3, 10, 10);
+	glPopMatrix();
 	glutSwapBuffers();
 }
 
