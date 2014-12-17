@@ -18,7 +18,7 @@ using namespace Eigen;
 
 
 #define PI 3.14159265
-#define EPS  0.0420
+#define EPS  0.420 //blaze it
 enum JOINT_TYPES {
   BALL = 0
 };
@@ -59,7 +59,10 @@ class Arm {
 		void GL_Render_Arm(); /*Render the arm in openGL when in callback function display*/
 		void IK_Solve(Vector3f pos); /*Best-effort arrangement of joints to get arm close as possible to position pos.*/
 		void rotate_arm(int seg, Vector3f orientation); /*Rotate a specific joint by orientation*/
-		bool update(Vector3f goal_pos); /*Perform the update algorithm on the arm to move it to goal_pos*/
+		void set_orientations(vector<Vector3f> vals);
+		vector<Vector3f> get_orientations();
+		bool iterative_update(Vector3f goal_pos);
+		bool linear_update(Vector3f goal_pos); /*Perform the update algorithm on the arm to move it to goal_pos*/
 		Vector3f get_end_pos(); /*Computes the end position of the arm, from base at Vector3f(0,0,0)*/
 		MatrixXf compute_Jacobian(); /*Constructs an array of 3x3N dP/dt partial derivatives for each joint with 3 DOF*/
 		Vector3f dPdT(int joint, int axis);/*Computes dp/dtheta for a specific joint along a certain axis to construct Jacobian*/

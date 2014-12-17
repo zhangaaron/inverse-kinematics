@@ -17,7 +17,6 @@ Arm::Arm(vector<float> sequence) {
 		ArmSegment a = ArmSegment(sequence.at(i), BALL);
 		arm_sequence.push_back(a);
 		arm_length += a.get_arm_length();
-		cout << "arm_len " << arm_length << endl;
 	}
 }
 Arm::Arm(Arm *toCopy) {
@@ -54,35 +53,57 @@ void Arm::rotate_arm(int seg, Vector3f orientation) {
 	arm_sequence.at(seg).set_joint_orientation(orientation);
 }
 
-bool Arm::update(Vector3f goal_pos) {
+void Arm::set_orientations(vector<Vector3f> vals) {
+	for (int i = 0; i < arm_sequence.size(); i++) {
+		arm_sequence.at(i).set_joint_orientation(vals.at(i));
+	}
+}
+
+vector<Vector3f> Arm::get_orientations() {
+	vector<Vector3f> to_rtn = vector<Vector3f>();
+	for (int i = 0; i < arm_sequence.size(); i ++) {
+		to_rtn.push_back(arm_sequence.at(i).get_joint_orientation());
+	}
+}
+
+/*Returns when we found a configuration of the arm closer to goal. Doesn't mean we have reached an acceptable threshold though for the goal. */
+bool Arm::iterative_update(Vector3f goal_pos) {
 	goal_pos = goal_pos - sys_to_world;
-	float arm_len =  get_arm_length();
-	cout << "arm length " << arm_len << endl;
-	cout << "goal_pos.norm" << goal_pos.norm() << endl;
-	if (goal_pos.norm() > get_arm_length()) {
+	float arm_len = get_arm_length();
+	if (goal_pos.norm() > arm_len) {
 		goal_pos.normalize();
 		goal_pos *= arm_len;
 		printf("Goal we got was out of reach, so we normalized to arm length\n");
 	}
+	float t = 1.0;
+	/*goal is linearly interpolated from current position to starting position. We start with t = 1, so that iter_goal = */
+	Vector3f iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
 	Vector3f dP = goal_pos - get_end_pos();
 	cout << "dP is " << dP << endl;
-	if (dP.norm() > EPS) {
-		MatrixXf Jacobian = compute_Jacobian();
-		JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); //Breaks J = USV*, where S is diagonalizable matrix? 
-		cout << "singular values are:" << endl << svd.singularValues() << endl;
-		cout << "left singular vectors are the columns of the thin U matrix:" << endl << svd.matrixU() << endl;
-		cout << "right singular vectors are the columns of the thin V matrix:" << endl << svd.matrixV() << endl;
-		MatrixXf dT = svd.solve(dP);
-		 cout << "solved for dT = " << dT << endl;
-		 //cout << "DT size" << dT.size() << "cols, rows" << dT.cols() << ", " << dT.rows();
-		for (int i = 0; i < get_arm_sequence().size(); i++) {
-			rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)));
-		}
-		return false;
+	vector<Vector3f> orientations = get_orientations();
+	while (!linear_update(iter_goal)) {
+		t *= 0.5; //halve t by two so it's closer to the goal. 
+		assert (t > 0.01); //if t gets this small indicates we are doing something wrong
+		iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
+		set_orientations(orientations); //reset orientations to where we were before since we didn't improve. 
 	}
-	return true;
+	return ((goal_pos - get_end_pos()).norm() < EPS);
 }
-//This is broken!
+/*Returns true if distance decreased otherwise return false*/
+bool Arm::linear_update(Vector3f goal_pos) {
+	Vector3f dP = goal_pos - get_end_pos();
+	cout << "dP is " << dP << endl;
+	MatrixXf Jacobian = compute_Jacobian();
+	JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); 
+	cout << "singular values are:" << endl << svd.singularValues() << endl;
+	MatrixXf dT = svd.solve(dP);
+	 cout << "solved for dT = " << dT << endl;
+	for (int i = 0; i < get_arm_sequence().size(); i++) {
+		rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)));
+	}
+	return (dP.norm() > (goal_pos - get_end_pos()).norm() ); 
+}
+
 /*We gon need a transformation stack to keep track of our transformation*/
 Vector3f Arm::get_end_pos() {
 	Vector3f end_effector = sys_to_world;
@@ -92,7 +113,7 @@ Vector3f Arm::get_end_pos() {
 		Vector3f orientation = arm_sequence.at(i).get_joint_orientation();
 		float norm = orientation.norm();
 		orientation.normalized();
-		transformation_stack = transformation_stack * AngleAxisf(norm, orientation);
+		transformation_stack = AngleAxisf(norm, orientation)*  transformation_stack;
 		end_effector += transformation_stack * Vector3f(0, 0, arm_sequence.at(i).get_arm_length());
 	}
 	return end_effector;

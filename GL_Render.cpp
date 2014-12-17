@@ -82,9 +82,10 @@ void display()
 	glutWireSphere(0.3, 10, 10);
 	glPopMatrix();
 	glColor3f(1, 1, 1);
-	GL_Arm->update(goal);
-	GL_Arm->GL_Render_Arm();
-	
+	while(!GL_Arm->iterative_update(goal)) {
+		printf("O deer god\n");
+		GL_Arm->GL_Render_Arm();
+	}	
 	glutSwapBuffers();
 }
 
@@ -179,7 +180,7 @@ void run_glut(Arm toRender, Vector3f goal_, int *argcp, char **argv){
 	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
 	glutInitWindowSize(640,480);
 	glutInitWindowPosition(100,100);
-	glutCreateWindow("IK");
+	glutCreateWindow("IK v.4.20");
 	GL_Arm = &toRender;
 	goal = goal_;
 	glutDisplayFunc(display);
