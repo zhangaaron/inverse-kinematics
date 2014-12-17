@@ -33,22 +33,32 @@ vector<ArmSegment> Arm::get_arm_sequence() {
 	return arm_sequence;
 }
 
-/*Call this inside display callback of GL to draw the arm as a sequence of cylinders*/
+/*Call this inside display callback of GL to draw the arm as a sequence of cones and spheres*/
 void Arm::GL_Render_Arm(){
 	glPushMatrix();
-	//glMultmatrixf(sys_to_world); //Default should be 0/
+	GLfloat red_diffuse_mat[] = {1.0, 0.0, 0.0};
+	GLfloat blue_diffuse_mat[] =  {0.0, 0.0, 1.0};
+	GLfloat white_diffuse_mat[] =  {1.0, 1.0, 1.0};
+	GLfloat shiny_green[] = {0.0, 1.0, 0.0};
+	GLfloat shine[] = { 50.0 };
 
 	for (int i = 0; i < arm_sequence.size(); i++) {
 		//fancy colors
 		switch (i % 3) {
 			case 0: 
-				glColor3f(1, 0, 0);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, red_diffuse_mat);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, shiny_green);
+				glMaterialfv(GL_FRONT, GL_SHININESS, shine);
 				break;
 			case 1:
-				glColor3f(1, 1, 1);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, white_diffuse_mat);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, shiny_green);
+				glMaterialfv(GL_FRONT, GL_SHININESS, shine);
 				break;
 			case 2:
-				glColor3f(0, 0, 1);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, blue_diffuse_mat);
+				glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, shiny_green);
+				glMaterialfv(GL_FRONT, GL_SHININESS, shine);
 				break;
 		}
 		ArmSegment seg = arm_sequence.at(i);

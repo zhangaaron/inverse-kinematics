@@ -21,13 +21,12 @@ unsigned char Buttons[3] = {0};
 Arm *GL_Arm;
 Vector3f goal;
 bool UPDATE = true;
+vector<Vector3f> *path = new vector<Vector3f>();
 
 GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat mat_shininess[] = { 50.0 };
-GLfloat redDiffuseMaterial[] = {1.0, 0.0, 0.0};
-GLfloat blue_diffuse_mat[] =  {0.0, 0.0, 1.0};
-GLfloat white_diffuse_mat[] =  {1.0, 1.0, 1.0};
 GLfloat whiteSpecularMaterial[] = {1.0, 1.0, 1.0};
+GLfloat blue[] = {0.0, 0.0, 1.0};
 
 void init() 
 {
@@ -35,7 +34,7 @@ void init()
 	GLfloat light_position[] = {0, 3, 0, 0.0 };
 	GLfloat whiteDiffuseLight[] = {1.0, 1.0, 1.0};
 	GLfloat whiteSpecularLight[] = {1.0, 1.0, 1.0}; 
-	GLfloat blackAmbientLight[] = {1.0, 0.0, 0.0};
+	GLfloat blackAmbientLight[] = {1.0, 1.0, 1.0};
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, whiteSpecularLight);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, blackAmbientLight);
@@ -47,11 +46,11 @@ void init()
 
 }
 /*Parametrically defined update function*/
-Vector3f path_function(int time) {
-	float x = 10 * cos((float) time / 100);
-	float y = 10 * sin((float) time / 100);
-	float z = 10 * cos((float) time /100);
-	return Vector3f(x, y, z);
+Vector3f path_function(float time) {
+	float x = (2 + cos(2 * time)) * cos(3 * time);
+	float y = (2 + cos(2 * time)) * sin(3 * time);
+	float z = sin(4 * time);
+	return Vector3f(2 * x, 2 * y, 2 * z);
 }
 
 void draw_coords() {
@@ -81,10 +80,11 @@ void draw_grid() {
 	}
 }
 void timer_func(int time) {
-	goal = path_function(time);
+	goal = path_function((float) time/50);
 	UPDATE = true;
 	glutTimerFunc(50, timer_func, time + 1);
 	glutPostRedisplay();
+	path->push_back(goal);
 }
 void draw_goal() {
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, whiteSpecularMaterial);
@@ -94,6 +94,20 @@ void draw_goal() {
 	glTranslatef(goal(0), goal(1), goal(2));
 	glutSolidSphere(0.1, 10, 10);
 	glPopMatrix();
+
+}
+
+void draw_path() {
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	for (int i = 0; i < path->size(); i++) {
+		Vector3f point = path->at(i);
+		glPushMatrix();
+		glTranslatef(point(0), point(1), point(2));
+		glutSolidSphere(0.1, 10, 10);
+		glPopMatrix();
+	}
 }
 void display()
 {
@@ -107,10 +121,13 @@ void display()
 	glEnable(GL_NORMALIZE);
 
 	/*Draw coords */
+
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, blue);
 	glBegin(GL_LINES);
-		draw_coords();
+		draw_grid();
 	glEnd();
 	draw_goal();
+	draw_path();
 	GL_Arm->GL_Render_Arm();
 	int i = 0;
 	while(UPDATE && i < 10 && !GL_Arm->iterative_update(goal) ) {
