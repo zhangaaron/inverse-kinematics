@@ -34,7 +34,8 @@ with magnitude being the total angle being rotated in degrees.*/
 class ArmSegment {
 public: 
 	ArmSegment(float arm_length, int joint_type);
-	Vector3f get_joint_orientation();
+	AngleAxisf get_joint_orientation();
+	Vector3f get_joint_orientation_v();
 
 	void set_joint_orientation(Vector3f orientation);
 	float get_arm_length();
@@ -65,6 +66,7 @@ class Arm {
 		bool linear_update(Vector3f goal_pos); /*Perform the update algorithm on the arm to move it to goal_pos*/
 		Vector3f get_end_pos(); /*Computes the end position of the arm, from base at Vector3f(0,0,0)*/
 		MatrixXf compute_Jacobian(); /*Constructs an array of 3x3N dP/dt partial derivatives for each joint with 3 DOF*/
+		MatrixXf pseudo_inverse();
 		Vector3f dPdT(int joint, int axis);/*Computes dp/dtheta for a specific joint along a certain axis to construct Jacobian*/
 	private:
 		vector<ArmSegment> arm_sequence; 

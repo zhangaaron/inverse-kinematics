@@ -41,7 +41,7 @@ void Arm::GL_Render_Arm(){
 	for (int i = 0; i < arm_sequence.size(); i++ ) {
 		//Do transformation
 		ArmSegment seg = arm_sequence.at(i);
-		Vector3f orientation = seg.get_joint_orientation();
+		Vector3f orientation = seg.get_joint_orientation_v();
 		float mag = orientation.norm();
 		if (mag) glRotatef(mag, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
 		seg.GL_Render_ArmSegment();
@@ -62,7 +62,7 @@ void Arm::set_orientations(vector<Vector3f> vals) {
 vector<Vector3f> Arm::get_orientations() {
 	vector<Vector3f> to_rtn = vector<Vector3f>();
 	for (int i = 0; i < arm_sequence.size(); i ++) {
-		to_rtn.push_back(arm_sequence.at(i).get_joint_orientation());
+		to_rtn.push_back(arm_sequence.at(i).get_joint_orientation_v());
 	}
 	return to_rtn;
 }
@@ -93,14 +93,16 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 /*Returns true if distance decreased otherwise return false*/
 bool Arm::linear_update(Vector3f goal_pos) {
 	Vector3f dP = goal_pos - get_end_pos();
+	cout << "Current position" << get_end_pos() << endl;
 	cout << "dP is " << dP << endl;
 	MatrixXf Jacobian = compute_Jacobian();
 	JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); 
-	cout << "singular values are:" << endl << svd.singularValues() << endl;
 	MatrixXf dT = svd.solve(dP);
-	 cout << "solved for dT = " << dT << endl;
+	//MatrixXf dT = pseudo_inverse() * dP;
+	cout << "solved for dT = " << dT << endl;
 	for (int i = 0; i < get_arm_sequence().size(); i++) {
-		rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)));
+		rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)) + 
+						arm_sequence.at(i).get_joint_orientation_v());
 	}
 	return (dP.norm() > (goal_pos - get_end_pos()).norm() ); 
 }
@@ -110,9 +112,10 @@ Vector3f Arm::get_end_pos() {
 	Vector3f end_effector = sys_to_world;
 
 	for (int i = 0; i < arm_sequence.size(); i ++) {
-		Vector3f orientation  = arm_sequence.at(i).get_joint_orientation();
+		AngleAxisf orientation  = arm_sequence.at(i).get_joint_orientation();
 		float len = arm_sequence.at(i).get_arm_length();
-		end_effector = AngleAxisf(orientation.norm(), orientation.normalized()) * Transform<float, 3, Affine>(Translation3f(0, 0, len)) * end_effector;
+		end_effector = Transform<float, 3, Affine>(orientation) *
+						 Transform<float, 3, Affine>(Translation3f(0, 0, len)) * end_effector;
 	}
 	return end_effector;
 }
@@ -131,9 +134,17 @@ MatrixXf Arm::compute_Jacobian() {
 	cout << "Jacobian \n" << Jacobian << endl;
 	return Jacobian;
 }
+
+MatrixXf Arm::pseudo_inverse() {
+    MatrixXf Jacovian = compute_Jacobian();
+    MatrixXf jjtInv = (Jacovian * Jacovian.transpose());
+    jjtInv = jjtInv.inverse();
+    
+    return (Jacovian.transpose() * jjtInv);
+}
 Vector3f Arm::dPdT(int joint, int axis) {
 	Arm jittered_arm = Arm(this);
-	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation();
+	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation_v();
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
 	switch (axis) { //Jitter by 1 degree for any axis
 		case X:
@@ -158,7 +169,14 @@ ArmSegment::ArmSegment(float arm_length, int joint_type) {
 	this->joint_type = joint_type;
 	this->joint_orientation = Vector3f(0, 0, 1); //Default no rotation about the z-axis
 }
-Vector3f ArmSegment::get_joint_orientation() {
+AngleAxisf ArmSegment::get_joint_orientation() {
+	if (joint_orientation.norm() == 0.0) return AngleAxisf(0, Vector3f(1, 1, 1));
+	Vector3f temp = joint_orientation; //temp is necessary so that we do not normalize the joint.
+	temp.normalize();
+	return AngleAxisf(joint_orientation.norm(), temp);
+}
+
+Vector3f ArmSegment::get_joint_orientation_v() {
 	return joint_orientation;
 }
 void ArmSegment::set_joint_orientation(Vector3f orientation) {

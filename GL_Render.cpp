@@ -85,7 +85,7 @@ void display()
 	int i = 0;
 	while(!GL_Arm->iterative_update(goal)) {
 		i++;
-		assert (i < 100);
+		assert (i < 10);
 	}
 	GL_Arm->GL_Render_Arm();
 	glutSwapBuffers();
