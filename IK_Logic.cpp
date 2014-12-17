@@ -64,6 +64,7 @@ vector<Vector3f> Arm::get_orientations() {
 	for (int i = 0; i < arm_sequence.size(); i ++) {
 		to_rtn.push_back(arm_sequence.at(i).get_joint_orientation());
 	}
+	return to_rtn;
 }
 
 /*Returns when we found a configuration of the arm closer to goal. Doesn't mean we have reached an acceptable threshold though for the goal. */
@@ -83,7 +84,7 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 	vector<Vector3f> orientations = get_orientations();
 	while (!linear_update(iter_goal)) {
 		t *= 0.5; //halve t by two so it's closer to the goal. 
-		assert (t > 0.01); //if t gets this small indicates we are doing something wrong
+		assert (t > 0.1); //if t gets this small indicates we are doing something wrong
 		iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
 		set_orientations(orientations); //reset orientations to where we were before since we didn't improve. 
 	}
@@ -107,14 +108,11 @@ bool Arm::linear_update(Vector3f goal_pos) {
 /*We gon need a transformation stack to keep track of our transformation*/
 Vector3f Arm::get_end_pos() {
 	Vector3f end_effector = sys_to_world;
-	AngleAxisf transformation_stack = AngleAxisf(0, Vector3f(0, 0, 0));
 
 	for (int i = 0; i < arm_sequence.size(); i ++) {
-		Vector3f orientation = arm_sequence.at(i).get_joint_orientation();
-		float norm = orientation.norm();
-		orientation.normalized();
-		transformation_stack = AngleAxisf(norm, orientation)*  transformation_stack;
-		end_effector += transformation_stack * Vector3f(0, 0, arm_sequence.at(i).get_arm_length());
+		Vector3f orientation  = arm_sequence.at(i).get_joint_orientation();
+		float len = arm_sequence.at(i).get_arm_length();
+		end_effector = AngleAxisf(orientation.norm(), orientation.normalized()) * Transform<float, 3, Affine>(Translation3f(0, 0, len)) * end_effector;
 	}
 	return end_effector;
 }
