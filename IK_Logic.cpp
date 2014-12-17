@@ -106,9 +106,9 @@ vector<Vector3f> Arm::get_orientations() {
 bool Arm::iterative_update(Vector3f goal_pos) {
 	goal_pos = goal_pos - sys_to_world;
 	float arm_len = get_arm_length();
-	if (goal_pos.norm() > arm_len) {
+	if (goal_pos.norm() * 1.03 > arm_len) {
 		goal_pos.normalize();
-		goal_pos *= arm_len;
+		goal_pos *= arm_len * 0.95;
 	}
 	float t = 1.0;
 	/*goal is linearly interpolated from current position to starting position. We start with t = 1, so that iter_goal = */
@@ -116,8 +116,7 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 	Vector3f dP = goal_pos - get_end_pos();
 	vector<Vector3f> orientations = get_orientations();
 	while (!linear_update(iter_goal) && t > 0.1) {
-		t *= 0.5; //halve t by two so it's closer to the goal. 
-
+		t *= 0.5; //halve t by two so it's closer to the start. 
 		iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
 		set_orientations(orientations); //reset orientations to where we were before since we didn't improve. 
 	}
@@ -127,14 +126,11 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 /*Returns true if distance decreased otherwise return false*/
 bool Arm::linear_update(Vector3f goal_pos) {
 	Vector3f dP = goal_pos - get_end_pos();
-	// cout << "Current position" << get_end_pos() << endl;
-	// cout << "dP is " << dP << endl;
 	MatrixXf Jacobian = compute_Jacobian();
 	JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); 
 	MatrixXf dT = svd.solve(dP);
-	dT *= 0.5;
-	//MatrixXf dT = pseudo_inverse() * dP;
-	// cout << "solved for dT = " << dT << endl;
+	// MatrixXf dT = pseudo_inverse() * dP;
+	dT *= 0.1;
 	for (int i = 0; i < get_arm_sequence().size(); i++) {
 		rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)) + 
 						arm_sequence.at(i).get_joint_orientation_v());
@@ -159,26 +155,26 @@ MatrixXf Arm::compute_Jacobian() {
 	return Jacobian;
 }
 
-// MatrixXf Arm::pseudo_inverse() {
-//     MatrixXf Jacovian = compute_Jacobian();
-//     MatrixXf jjtInv = (Jacovian * Jacovian.transpose());
-//     jjtInv = jjtInv.inverse();
+MatrixXf Arm::pseudo_inverse() {
+    MatrixXf Jacovian = compute_Jacobian();
+    MatrixXf jjtInv = (Jacovian * Jacovian.transpose());
+    jjtInv = jjtInv.inverse();
     
-//     return (Jacovian.transpose() * jjtInv);
-// }
+    return (Jacovian.transpose() * jjtInv);
+}
 Vector3f Arm::dPdT(int joint, int axis) {
 	Arm jittered_arm = Arm(this);
 	Vector3f original_orientation = jittered_arm.arm_sequence.at(joint).get_joint_orientation_v();
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
 	switch (axis) { //Jitter by 1 degree for any axis
 		case X:
-			new_orientation = original_orientation + Vector3f(0.5, 0, 0);
+			new_orientation = original_orientation + Vector3f(0.1, 0, 0);
 			break;
 		case Y:
-			new_orientation = original_orientation + Vector3f(0, 0.5, 0);
+			new_orientation = original_orientation + Vector3f(0, 0.1, 0);
 			break;
 		case Z:
-			new_orientation = original_orientation + Vector3f(0, 0, 0.5);
+			new_orientation = original_orientation + Vector3f(0, 0, 0.1);
 			break;
 		default:
 			printf("Unexpected axis value in dPdT\n");
@@ -194,7 +190,7 @@ ArmSegment::ArmSegment(float arm_length, int joint_type) {
 	this->joint_orientation = Vector3f(0, 0, 1); //Default no rotation about the z-axis
 }
 AngleAxisf ArmSegment::get_joint_orientation() {
-	if (joint_orientation.norm() == 0.0) return AngleAxisf(0, Vector3f(1, 1, 1));
+	if (joint_orientation.norm() == 0.0) return AngleAxisf(0, Vector3f(0, 0, 1));
 	Vector3f temp = joint_orientation; //temp is necessary so that we do not normalize the joint.
 	temp.normalize();
 	return AngleAxisf(joint_orientation.norm(), temp);

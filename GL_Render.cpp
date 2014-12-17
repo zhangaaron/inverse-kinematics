@@ -47,10 +47,10 @@ void init()
 }
 /*Parametrically defined update function*/
 Vector3f path_function(float time) {
-	float x = (2 + cos(2 * time)) * cos(3 * time);
-	float y = (2 + cos(2 * time)) * sin(3 * time);
-	float z = sin(4 * time);
-	return Vector3f(2 * x, 2 * y, 2 * z);
+	float x = 10 * cos(time) - 10;
+	float y = 10 * sin(time);
+	float z = 0;
+	return Vector3f(x, y, z);
 }
 
 void draw_coords() {
@@ -80,9 +80,9 @@ void draw_grid() {
 	}
 }
 void timer_func(int time) {
-	goal = path_function((float) time/50);
+	goal = path_function((float) time/100);
 	UPDATE = true;
-	glutTimerFunc(50, timer_func, time + 1);
+	glutTimerFunc(10, timer_func, time + 1);
 	glutPostRedisplay();
 	path->push_back(goal);
 }
