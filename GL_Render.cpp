@@ -4,10 +4,6 @@
 	References: GLProgramming.com, opengl.org forums for lighting, shading, keyboard guide.
 */
 
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <stdlib.h>
 #include "GL_Render.h"
 
 using namespace std;
@@ -26,8 +22,27 @@ Arm *GL_Arm;
 Vector3f goal;
 bool UPDATE = true;
 
+GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+GLfloat mat_shininess[] = { 50.0 };
+GLfloat redDiffuseMaterial[] = {1.0, 0.0, 0.0};
+GLfloat blue_diffuse_mat[] =  {0.0, 0.0, 1.0};
+GLfloat white_diffuse_mat[] =  {1.0, 1.0, 1.0};
+GLfloat whiteSpecularMaterial[] = {1.0, 1.0, 1.0};
+
 void init() 
 {
+
+	GLfloat light_position[] = {0, 3, 0, 0.0 };
+	GLfloat whiteDiffuseLight[] = {1.0, 1.0, 1.0};
+	GLfloat whiteSpecularLight[] = {1.0, 1.0, 1.0}; 
+	GLfloat blackAmbientLight[] = {1.0, 0.0, 0.0};
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, whiteSpecularLight);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, blackAmbientLight);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, whiteDiffuseLight);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
 	glEnable(GL_DEPTH_TEST);
 
 }
@@ -71,6 +86,15 @@ void timer_func(int time) {
 	glutTimerFunc(50, timer_func, time + 1);
 	glutPostRedisplay();
 }
+void draw_goal() {
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	glPushMatrix();
+	glTranslatef(goal(0), goal(1), goal(2));
+	glutSolidSphere(0.1, 10, 10);
+	glPopMatrix();
+}
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -86,23 +110,19 @@ void display()
 	glBegin(GL_LINES);
 		draw_coords();
 	glEnd();
-
+	draw_goal();
 	GL_Arm->GL_Render_Arm();
-
-	glColor3f(1, 0, 0);
-	glPushMatrix();
-	glTranslatef(goal(0), goal(1), goal(2));
-	glutWireSphere(0.3, 10, 10);
-	glPopMatrix();
-	glColor3f(1, 1, 1);
 	int i = 0;
-	while(UPDATE && i < 30 && !GL_Arm->iterative_update(goal) ) {
+	while(UPDATE && i < 10 && !GL_Arm->iterative_update(goal) ) {
 		i++;
 	}
-	if (i == 30) printf("Warning: we updated 30 times and did not reach error threshold\n");
-	UPDATE = false;
+	if (i == 10) printf("Warning: we updated 10 times and did not reach error threshold\n");
+	UPDATE = false;	
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 	GL_Arm->GL_Render_Arm();
-	glColor3f(0, 1, 0);
+
 	Vector3f actual = GL_Arm->get_end_pos();
 	glPushMatrix();
 	glTranslatef(actual(0), actual(1), actual(2));

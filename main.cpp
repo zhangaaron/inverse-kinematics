@@ -1,11 +1,3 @@
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <stdlib.h>
-#include <Eigen/Dense>
-#include <GL/glut.h>
-#include <GL/glu.h>
 #include "IK_Logic.h"
 #include "GL_Render.h"
 

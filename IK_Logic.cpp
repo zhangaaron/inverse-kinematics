@@ -104,7 +104,6 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 	/*goal is linearly interpolated from current position to starting position. We start with t = 1, so that iter_goal = */
 	Vector3f iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
 	Vector3f dP = goal_pos - get_end_pos();
-	cout << "dP is " << dP << endl;
 	vector<Vector3f> orientations = get_orientations();
 	while (!linear_update(iter_goal) && t > 0.1) {
 		t *= 0.5; //halve t by two so it's closer to the goal. 
@@ -123,6 +122,7 @@ bool Arm::linear_update(Vector3f goal_pos) {
 	MatrixXf Jacobian = compute_Jacobian();
 	JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); 
 	MatrixXf dT = svd.solve(dP);
+	dT *= 0.5;
 	//MatrixXf dT = pseudo_inverse() * dP;
 	// cout << "solved for dT = " << dT << endl;
 	for (int i = 0; i < get_arm_sequence().size(); i++) {
@@ -145,7 +145,7 @@ MatrixXf Arm::compute_Jacobian() {
 		Jacobian.col(3 * i + 1) << dPdT_joint_i_Y;
 		Jacobian.col(3 * i + 2) << dPdT_joint_i_Z;
 	}
-	cout << "Jacobian \n" << Jacobian << endl;
+	//cout << "Jacobian \n" << Jacobian << endl;
 	return Jacobian;
 }
 
@@ -162,13 +162,13 @@ Vector3f Arm::dPdT(int joint, int axis) {
 	Vector3f new_orientation = Vector3f(0, 0, 0); //placeholder initialization.	
 	switch (axis) { //Jitter by 1 degree for any axis
 		case X:
-			new_orientation = original_orientation + Vector3f(1, 0, 0);
+			new_orientation = original_orientation + Vector3f(0.5, 0, 0);
 			break;
 		case Y:
-			new_orientation = original_orientation + Vector3f(0, 1, 0);
+			new_orientation = original_orientation + Vector3f(0, 0.5, 0);
 			break;
 		case Z:
-			new_orientation = original_orientation + Vector3f(0, 0, 1);
+			new_orientation = original_orientation + Vector3f(0, 0, 0.5);
 			break;
 		default:
 			printf("Unexpected axis value in dPdT\n");
@@ -204,6 +204,6 @@ int ArmSegment::get_joint_type() {
 }
 
 void ArmSegment::GL_Render_ArmSegment() {
-	glutWireSphere((float) arm_length /4, 15, 15);
-	glutWireCone((float) arm_length / 4, arm_length, 20, 20);
+	glutSolidSphere((float) arm_length /4, 15, 15);
+	glutSolidCone((float) arm_length / 4, arm_length, 20, 20);
 }
