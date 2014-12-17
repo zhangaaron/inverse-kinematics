@@ -24,13 +24,21 @@ int lasty = 0;
 unsigned char Buttons[3] = {0};
 Arm *GL_Arm;
 Vector3f goal;
-bool update_arm = true;
+bool UPDATE = true;
 
 void init() 
 {
 	glEnable(GL_DEPTH_TEST);
 
 }
+/*Parametrically defined update function*/
+Vector3f path_function(int time) {
+	float x = 10 * cos((float) time / 100);
+	float y = 10 * sin((float) time / 100);
+	float z = 10 * cos((float) time /100);
+	return Vector3f(x, y, z);
+}
+
 void draw_coords() {
 	glColor3f(1, 0, 0);
 	glVertex3f(0, 0, 0);
@@ -57,7 +65,12 @@ void draw_grid() {
 		glVertex3f(4, (float)-i / 5, 0);
 	}
 }
-
+void timer_func(int time) {
+	goal = path_function(time);
+	UPDATE = true;
+	glutTimerFunc(50, timer_func, time + 1);
+	glutPostRedisplay();
+}
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -74,7 +87,6 @@ void display()
 		draw_coords();
 	glEnd();
 
-	glMatrixMode(GL_MODELVIEW); //I don't think this call is necssary but it can't hurt.
 	GL_Arm->GL_Render_Arm();
 
 	glColor3f(1, 0, 0);
@@ -84,11 +96,11 @@ void display()
 	glPopMatrix();
 	glColor3f(1, 1, 1);
 	int i = 0;
-	while(update_arm && i < 30 && !GL_Arm->iterative_update(goal) ) {
+	while(UPDATE && i < 30 && !GL_Arm->iterative_update(goal) ) {
 		i++;
 	}
 	if (i == 30) printf("Warning: we updated 30 times and did not reach error threshold\n");
-	update_arm = false;
+	UPDATE = false;
 	GL_Arm->GL_Render_Arm();
 	glColor3f(0, 1, 0);
 	Vector3f actual = GL_Arm->get_end_pos();
@@ -185,14 +197,14 @@ void Mouse(int b,int s,int x,int y)
 	glutPostRedisplay();
 }
 
-void run_glut(Arm toRender, Vector3f goal_, int *argcp, char **argv){
+void run_glut(Arm toRender, int *argcp, char **argv){
 	glutInit(argcp,argv);
 	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
 	glutInitWindowSize(640,480);
 	glutInitWindowPosition(100,100);
 	glutCreateWindow("IK v.4.20");
 	GL_Arm = &toRender;
-	goal = goal_;
+	glutTimerFunc(50, timer_func, 0);
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutMouseFunc(Mouse);

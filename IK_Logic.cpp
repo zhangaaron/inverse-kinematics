@@ -39,11 +39,21 @@ void Arm::GL_Render_Arm(){
 	//glMultmatrixf(sys_to_world); //Default should be 0/
 
 	for (int i = 0; i < arm_sequence.size(); i++) {
-		//Do transformation
+		//fancy colors
+		switch (i % 3) {
+			case 0: 
+				glColor3f(1, 0, 0);
+				break;
+			case 1:
+				glColor3f(1, 1, 1);
+				break;
+			case 2:
+				glColor3f(0, 0, 1);
+				break;
+		}
 		ArmSegment seg = arm_sequence.at(i);
 		Vector3f orientation = seg.get_joint_orientation_v();
 		float mag = orientation.norm();
-		cout << "AngleAxisf encoding for arm: " << seg.get_joint_orientation_v() << endl; 
 		if (mag != 0.0) glRotatef(mag * 180 / PI, orientation(0)/mag, orientation(1)/mag, orientation(2)/mag);
 		seg.GL_Render_ArmSegment();
 		glTranslatef(0, 0, seg.get_arm_length());
@@ -89,7 +99,6 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 	if (goal_pos.norm() > arm_len) {
 		goal_pos.normalize();
 		goal_pos *= arm_len;
-		printf("Goal we got was out of reach, so we normalized to arm length\n");
 	}
 	float t = 1.0;
 	/*goal is linearly interpolated from current position to starting position. We start with t = 1, so that iter_goal = */
@@ -97,24 +106,25 @@ bool Arm::iterative_update(Vector3f goal_pos) {
 	Vector3f dP = goal_pos - get_end_pos();
 	cout << "dP is " << dP << endl;
 	vector<Vector3f> orientations = get_orientations();
-	while (!linear_update(iter_goal)) {
+	while (!linear_update(iter_goal) && t > 0.1) {
 		t *= 0.5; //halve t by two so it's closer to the goal. 
-		assert (t > 0.1); //if t gets this small indicates we are doing something wrong
+
 		iter_goal = goal_pos * t + get_end_pos() * (1.0 - t);
 		set_orientations(orientations); //reset orientations to where we were before since we didn't improve. 
 	}
+	if (t < 0.1) printf("Warning: t < 0.1 for in iterative_update.\n");
 	return ((goal_pos - get_end_pos()).norm() < EPS);
 }
 /*Returns true if distance decreased otherwise return false*/
 bool Arm::linear_update(Vector3f goal_pos) {
 	Vector3f dP = goal_pos - get_end_pos();
-	cout << "Current position" << get_end_pos() << endl;
-	cout << "dP is " << dP << endl;
+	// cout << "Current position" << get_end_pos() << endl;
+	// cout << "dP is " << dP << endl;
 	MatrixXf Jacobian = compute_Jacobian();
 	JacobiSVD<MatrixXf> svd(Jacobian, ComputeThinU | ComputeThinV); 
 	MatrixXf dT = svd.solve(dP);
 	//MatrixXf dT = pseudo_inverse() * dP;
-	cout << "solved for dT = " << dT << endl;
+	// cout << "solved for dT = " << dT << endl;
 	for (int i = 0; i < get_arm_sequence().size(); i++) {
 		rotate_arm(i, Vector3f(dT(3 * i), dT(3 * i + 1), dT(3 * i + 2)) + 
 						arm_sequence.at(i).get_joint_orientation_v());

@@ -28,5 +28,5 @@ int main ( int argc, char **argv) {
 	// 	i++;
 	// 	assert (i < 10);
 	// }
-	run_glut(test_arm, Vector3f(10.99, 0, 0), &argc, argv);
+	run_glut(test_arm, &argc, argv);
 }

@@ -18,7 +18,7 @@ using namespace Eigen;
 
 
 #define PI 3.14159265
-#define EPS  1.00 //blaze it
+#define EPS  1.00
 enum JOINT_TYPES {
   BALL = 0
 };
